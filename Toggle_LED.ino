@@ -1,5 +1,5 @@
-int LED = D5;    
-int buttonPin = D8;   
+#define LED D4   
+#define buttonPin D5   
 bool buttonState = 0;      
 bool Mode = 0;            
 
@@ -11,12 +11,13 @@ void setup()
 
 void loop()
 {
-  if (digitalRead(buttonPin)) 
+  bool sw = digitalRead(buttonPin);
+  if (sw == 1) 
   {
-    if (!buttonState) 
+    if (buttonState == 0) 
     {
-      buttonState = true;
-      Mode = !Mode; 
+      Mode = !Mode;
+      buttonState = 1; 
     }
   }
   else buttonState = false;
