@@ -1,10 +1,12 @@
-#define ia1 D12 //moter a เดินหน้า
-#define ia2 D3 //moter a ถอยหลัง
-#define ib1 D10 //moter b เดินหน้า
-#define ib2 D9 //moter b ถอยหลัง
+#define ma1 3 //กำหนด Pin motorA เดินหน้า
+#define ma2 4 //กำหนด Pin motorA ถอยหลัง
+#define mb1 5 //กำหนด Pin motorB เดินหน้า
+#define mb2 6 //กำหนด Pin motorB ถอยหลัง
 
-#define ls D4 //sensorซ้าย
-#define rs D6 //sensorขวา
+#define sensorL 10 //sensor ซ้าย
+#define sensorR 11 //sensor ขวา
+#define sensorB 12 //sensor หลัง
+#define sensorC A0 //sensor สี
 
 #define RED 1
 #define YELLOW 2
@@ -12,25 +14,29 @@
 #define NOCOLOR 0
 #define maxSpd 255    // motor max speed
 
-#include <HCSR04.h>
-HCSR04 hc(D7,D8); //initialisation class HCSR04 (trig,echo);
+#include <NewPing.h>
 
-int analogPin = A5; //ประกาศตัวแปร ให้ analogPin แทนขา analog ขาที่5
+#define TRIG_PIN 7
+#define ECHO_PIN 8
+#define MAX_DISTANCE 200
+NewPing sonar(TRIG_PIN, ECHO_PIN, MAX_DISTANCE);
 
-int led1 = D11;
-int buttonPin = D2;
-int val=0;
-int old_val=0;
-int state=0;
+#define sw1 9
 
-int color=0;
+int ledState = 10;
+
+int sw_1 = 0;
+int old_sw1 = 0;
+int state = 0;
+
+int color = 0;
 int getColor() {
-  int NO_color = analogRead(analogPin);           //อ่านค่าสัญญาณ analog ขา5 ที่ต่อกับ TCRT5000 
-  if ((NO_color>2400)&&(NO_color<2600))       //สีแดง
+  int NO_color = analogRead(sensorC);           //อ่านค่า sensor สี ที่ต่อกับ TCRT5000
+  if ((NO_color > 2200) && (NO_color < 2500)) //สีแดง
     return RED;
-  else if ((NO_color>2600)&&(NO_color<2800))  //สีเหลือง
+  else if ((NO_color > 1900) && (NO_color < 2200)) //สีเหลือง
     return YELLOW;
-  else if ((NO_color>3300)&&(NO_color<3500))  //สีดำ
+  else if ((NO_color > 3600) && (NO_color < 3900)) //สีดำ
     return BLACK;
   else                                        //ไม่พบสี
     return NOCOLOR;
@@ -38,163 +44,141 @@ int getColor() {
 
 void setup() {
   // put your setup code here, to run once:
-  pinMode(ls, INPUT);
-  pinMode(rs, INPUT);
-  pinMode(buttonPin, INPUT);
-  pinMode(led1, OUTPUT); 
-  pinMode(ia1, OUTPUT);
-  pinMode(ia2, OUTPUT);
-  pinMode(ib1, OUTPUT);
-  pinMode(ib2, OUTPUT);
+  pinMode(sensorL, INPUT);
+  pinMode(sensorR, INPUT);
+  pinMode(sensorB, INPUT);
+  pinMode(sensorC, INPUT);
+  pinMode(sw1, INPUT);
+  pinMode(ledState, OUTPUT);
+  pinMode(ma1, OUTPUT);
+  pinMode(ma2, OUTPUT);
+  pinMode(mb1, OUTPUT);
+  pinMode(mb2, OUTPUT);
   Serial.begin(115200);
 }
 
-void loop() 
-{ 
- color = getColor();
- val = digitalRead(buttonPin);
- if( (val==HIGH) && (old_val==LOW)) 
- {
-  state=!state;
- }
- old_val=val;
- if (state==1) //เมื่อกดสวิทซ์ 1 ครั้ง ใช้กลยุทธ์รุก
- {
-  digitalWrite(led1, HIGH);
-  if((hc.dist()>10)&&((digitalRead(ls)==HIGH)||(digitalRead(rs)==HIGH))&&(color == NOCOLOR))  // เดินหน้าเมื่อ sensor ด้านหน้า ด้านข้าง และด้านล่างไม่ทำงาน 
+void loop()
+{
+  color = getColor();
+  sw_1 = digitalRead(sw1);
+  if ( (sw_1 == HIGH) && (old_sw1 == LOW))
   {
-  aForward(maxSpd);
-  bForward(maxSpd);
+    state = !state;
   }
-  
-  if((hc.dist()<10)&&((digitalRead(ls)==HIGH)||(digitalRead(rs)==HIGH))&&(color == NOCOLOR))  // break เมื่อ sensor ด้านหน้าทำงาน แต่ด้านข้างและด้านล่างไม่ทำงาน
+  old_sw1 = sw_1;
+  if (state == 1) // state = 1 กลยุทธ์รุก
   {
-  aBreak();
-  bBreak();
-  }
+    digitalWrite(ledState, HIGH);
+    if ((sonar.ping_cm() > 10) && ((digitalRead(sensorL) == HIGH) || (digitalRead(sensorR) == HIGH))) // เดินหน้าเมื่อ ultrasonic ด้านหน้าและ sensor ด้านข้าง ไม่เจอสิ่งกีดขวาง
+    {
+      moveAhead(175);
+    }
 
-  if((hc.dist()<10)&&((digitalRead(ls)==LOW)||(digitalRead(rs)==LOW))&&(color == NOCOLOR))  // เดินถอยหลัง 3วิ เมื่อ sensor ด้านหน้าและข้างซ้ายขวาทำงาน แต่ด้านล่างไม่ทำงาน
-  {
-  aRewardTime(3000);
-  bRewardTime(3000);
-  }
-  
-  if(color == RED)  // เดินกลับรถ เมื่อ sensor ด้านล่างตรวจจับเส้นสีแดงได้
-  {
-  aForwardTime(5000);
-  bRewardTime(5000);
-  }
+    if ((sonar.ping_cm() < 10) && ((digitalRead(sensorL) == HIGH) || (digitalRead(sensorR) == HIGH))) // break เมื่อ ultrasonic ด้านหน้าเจอ แต่ sensor ด้านข้างและด้านล่างไมเจอสิ่งกีดขวาง
+    {
+      moveBack(100);
+    }
 
-  if(color == YELLOW)  // รถหยุด เมื่อ sensor ด้านล่างตรวจจับเส้นสีเหลืองได้
-  {
-  aStop();
-  bStop();
-  }
- }
- else
- {
-  digitalWrite (led1,LOW);
-  if((hc.dist()>5)&&((digitalRead(ls)==HIGH)||(digitalRead(rs)==HIGH))&&(color == NOCOLOR))  // เดินหน้าเมื่อ sensor ด้านหลัง ด้านข้าง และด้านล่าง ไม่ทำงาน
-  {
-  aReward(maxSpd);
-  bReward(maxSpd);
-  }
+    if ((sonar.ping_cm() < 10) && ((digitalRead(sensorL) == LOW) || (digitalRead(sensorR) == LOW))) // เดินถอยหลัง 3วิ เมื่อเจอสิ่งกีดขวางด้านหน้าและข้างซ้ายขวา
+    {
+      moveBack(100);
+    }
 
-   if((hc.dist()<5)&&((digitalRead(ls)==HIGH)||(digitalRead(rs)==HIGH))&&(color == NOCOLOR)) // ถอยหลังเมื่อ sensor ด้านหลังทำงาน แต่ด้านข้างและล่างไม่ทำงาน
-  {
-  aForward(maxSpd);
-  bForward(maxSpd);
+    if (color == RED) // เดินกลับรถ เมื่อ sensor ด้านล่างตรวจจับเส้นสีแดงได้
+    {
+      uTurn(200);
+    }
+
+    if (color == YELLOW) // รถหยุด เมื่อ sensor ด้านล่างตรวจจับเส้นสีเหลืองได้
+    {
+      aStop();
+      bStop();
+    }
   }
-  
-  if((digitalRead(ls)==LOW)||(digitalRead(rs)==LOW)&&(color == NOCOLOR))  // เบรค เมื่อ sensor ด้านข้างซ้ายหรือขวาทำงาน แต่ล่างไม่ทำงาน
+  else if (state == 0) // state = 0 กลยุทธ์รับ
   {
-  aBreak();
-  bBreak();
-  } 
-    
-  if(color == BLACK)  // กลับรถ เมื่อ sensor ด้านล่างตรวจจับเส้นสีดำได้
-  {
-  aForwardTime(5000);
-  bRewardTime(5000);
-  }
-  
+    digitalWrite (ledState, LOW);
+    if ((sonar.ping_cm() > 5) && ((digitalRead(sensorL) == HIGH) || (digitalRead(sensorR) == HIGH))) // เดินหน้าเมื่อ sensor ด้านหลัง ด้านข้าง ไม่ทำงาน
+    {
+      moveAhead(175);
+    }
+
+    if ((sonar.ping_cm() < 5) && ((digitalRead(sensorL) == HIGH) || (digitalRead(sensorR) == HIGH))) // กลับรถเมื่อ ultrasonic เจอสิ่งกีดขวาง
+    {
+      uTurn(200);
+    }
+
+    if ((digitalRead(sensorL) == LOW) || (digitalRead(sensorR) == LOW)) // เบรค เมื่อ sensor ด้านข้างซ้ายหรือขวาทำงาน
+    {
+      aBreak();
+      bBreak();
+      if (digitalRead(sensorB) == HIGH) // ถอยหลังเมื่อไม่มีสิ่งกีดขวางอยู่ด้านหลัง
+      {
+        moveBack(100);
+        delay(1000);
+      }
+    }
   }
   delay(20);
-       
+}
+
+void moveAhead(int spd)
+{
+  analogWrite(ma1, spd);
+  digitalWrite(ma2, LOW);
+  analogWrite(mb1, spd);
+  digitalWrite(mb2, LOW);
+}
+
+void moveBack(int spd)
+{
+  analogWrite(ma1, LOW);
+  digitalWrite(ma2, spd);
+  analogWrite(mb1, LOW);
+  digitalWrite(mb2, spd);
+}
+
+void uTurn(int spd)
+{
+  analogWrite(ma1, spd);
+  digitalWrite(ma2, LOW);
+  analogWrite(mb1, LOW);
+  digitalWrite(mb2, spd);
 }
 
 void aStop()
 {
-  digitalWrite(ia1, LOW);   // motor stop
-  digitalWrite(ia2, LOW);    
+  digitalWrite(ma1, LOW);   // motor stop
+  digitalWrite(ma2, LOW);
 }
 
 void aBreak()
 {
-  digitalWrite(ia1, HIGH);   // motor break
-  digitalWrite(ia2, HIGH);    
+  digitalWrite(ma1, HIGH);   // motor break
+  digitalWrite(ma2, HIGH);
 }
 
 void bStop()
 {
-  digitalWrite(ib1, LOW);   // motor stop
-  digitalWrite(ib2, LOW);    
+  digitalWrite(mb1, LOW);   // motor stop
+  digitalWrite(mb2, LOW);
 }
 
 void bBreak()
 {
-  digitalWrite(ib1, HIGH);   // motor break
-  digitalWrite(ib2, HIGH);    
+  digitalWrite(mb1, HIGH);   // motor break
+  digitalWrite(mb2, HIGH);
 }
 
 void aForward(int speed)
 {
-  digitalWrite(ia2, LOW);   
-  analogWrite(ia1, speed);   
+  analogWrite(ma1, speed);
+  digitalWrite(ma2, LOW);
+
 }
 
 void bForward(int speed)
 {
-  digitalWrite(ib2, LOW);   
-  analogWrite(ib1, speed);   
-}
-
-void aReward(int speed)
-{
-  digitalWrite(ia1, LOW);   
-  analogWrite(ia2, speed);   
-}
-
-void bReward(int speed)
-{
-  digitalWrite(ib1, LOW);   
-  analogWrite(ib2, speed);   
-}
-
-void aRewardTime(int time)
-{
-  digitalWrite(ia1, LOW);   
-  analogWrite(ia2, maxSpd);
-  delay (time);   
-}
-
-void bRewardTime(int time)
-{
-  digitalWrite(ib1, LOW);   
-  analogWrite(ib2, maxSpd);
-  delay (time);    
-}
-
-void aForwardTime(int time)
-{
-  digitalWrite(ia2, LOW);   
-  analogWrite(ia1, maxSpd);
-  delay (time);    
-}
-
-void bForwardTime(int time)
-{
-  digitalWrite(ib2, LOW);   
-  analogWrite(ib1, maxSpd);
-  delay (time);    
+  digitalWrite(mb2, LOW);
+  analogWrite(mb1, speed);
 }
