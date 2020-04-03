@@ -80,15 +80,16 @@ void loop()
       bBreak();
     }
 
-    if ((sonar.ping_cm() < 10) && ((digitalRead(sensorL) == LOW) || (digitalRead(sensorR) == LOW))) // เดินถอยหลัง 3วิ เมื่อเจอสิ่งกีดขวางด้านหน้าและข้างซ้ายขวา
+    if ((sonar.ping_cm() < 10) && ((digitalRead(sensorL) == LOW) || (digitalRead(sensorR) == LOW))) // เดินถอยหลัง 2 วิ เมื่อเจอสิ่งกีดขวางด้านหน้าและข้างซ้ายขวา
     {
       moveBack(100);
-      delay(3000);
+      delay(2000);
     }
 
     if (color == RED) // เดินกลับรถ เมื่อ sensor ด้านล่างตรวจจับเส้นสีแดงได้
     {
       uTurn(200);
+      delay(1500);
     }
 
     if (color == YELLOW) // รถหยุด เมื่อ sensor ด้านล่างตรวจจับเส้นสีเหลืองได้
@@ -108,6 +109,7 @@ void loop()
     if ((sonar.ping_cm() < 5) && ((digitalRead(sensorL) == HIGH) || (digitalRead(sensorR) == HIGH))) // กลับรถเมื่อ ultrasonic เจอสิ่งกีดขวาง
     {
       uTurn(200);
+      delay(1500);
     }
 
     if ((digitalRead(sensorL) == LOW) || (digitalRead(sensorR) == LOW)) // เบรค เมื่อ sensor ด้านข้างซ้ายหรือขวาทำงาน
