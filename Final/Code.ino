@@ -116,11 +116,6 @@ void loop()
     {
       aBreak();
       bBreak();
-      if (digitalRead(sensorB) == HIGH) // ถอยหลังเมื่อไม่มีสิ่งกีดขวางอยู่ด้านหลัง
-      {
-        moveBack(100);
-        delay(1000);
-      }
     }
   }
   delay(20);
