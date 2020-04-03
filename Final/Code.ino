@@ -76,12 +76,14 @@ void loop()
 
     if ((sonar.ping_cm() < 10) && ((digitalRead(sensorL) == HIGH) || (digitalRead(sensorR) == HIGH))) // break เมื่อ ultrasonic ด้านหน้าเจอ แต่ sensor ด้านข้างและด้านล่างไมเจอสิ่งกีดขวาง
     {
-      moveBack(100);
+      aBreak();
+      bBreak();
     }
 
     if ((sonar.ping_cm() < 10) && ((digitalRead(sensorL) == LOW) || (digitalRead(sensorR) == LOW))) // เดินถอยหลัง 3วิ เมื่อเจอสิ่งกีดขวางด้านหน้าและข้างซ้ายขวา
     {
       moveBack(100);
+      delay(3000);
     }
 
     if (color == RED) // เดินกลับรถ เมื่อ sensor ด้านล่างตรวจจับเส้นสีแดงได้
